@@ -92,6 +92,21 @@ def generate_launch_description():
     # Others
     rviz_file = os.path.join(get_package_share_directory('franka_description'), 'rviz',
                              'visualize_franka.rviz')
+
+    # RosBridge
+    
+    rosbridge_server = IncludeLaunchDescription(
+        FrontendLaunchDescriptionSource(
+            os.path.join( get_package_share_directory('rosbridge_server'),
+                'launch', 'rosbridge_websocket_launch.xml')
+        ),
+        launch_arguments={
+            'port': '9090',
+            # Additional parameters can be added here, for example:
+            # 'address': '',
+            # 'ssl': 'false'
+        }.items()
+    )
     
 
     return LaunchDescription([
@@ -139,5 +154,15 @@ def generate_launch_description():
              name='rviz2',
              arguments=['--display-config', rviz_file],
              condition=IfCondition(use_rviz)
-             )
+        ),
+        
+        # Cartesian Controller
+        Node(
+            package='controller_manager',
+            executable='spawner',
+            arguments=['cartesian_impedance_controller', '-c', concatenate_ns(ns, 'controller_manager', True)],
+            output='screen',
+        ),
+        # RosBridge Initialization
+        rosbridge_server
     ])
