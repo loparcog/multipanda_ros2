@@ -1,39 +1,72 @@
+import math
+
+from geometry_msgs.msg import Pose, Point, Quaternion
+
 import rclpy
 from rclpy.node import Node
 
-from std_msgs.msg import String
+from tf2_ros import TransformException
+from tf2_ros.buffer import Buffer
+from tf2_ros.transform_listener import TransformListener
 
 
-class CartesianPosePublisher(Node):
+
+class FrameListener(Node):
 
     def __init__(self):
-        super().__init__('minimal_publisher')
-        self.publisher_ = self.create_publisher(String, 'topic', 10)
-        timer_period = 0.5  # seconds
-        self.timer = self.create_timer(timer_period, self.timer_callback)
-        self.i = 0
+        super().__init__('tf_translator')
 
-    def timer_callback(self):
-        msg = String()
-        msg.data = 'Hello World: %d' % self.i
-        self.publisher_.publish(msg)
-        self.get_logger().info('Publishing: "%s"' % msg.data)
-        self.i += 1
+        self.get_logger().info("AAA")
+
+        # Declare and acquire `target_frame` parameter
+        self.target_frame = self.declare_parameter(
+          'target_frame', 'panda_link8').get_parameter_value().string_value
+
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+
+        # Create turtle2 velocity publisher
+        self.publisher = self.create_publisher(Pose, 'test/pose', 1)
+
+        # Call on_timer function every second
+        self.timer = self.create_timer(1.0, self.on_timer)
+
+    def on_timer(self):
+        # Store frame names in variables that will be used to
+        # compute transformations
+        from_frame_rel = self.target_frame
+        to_frame_rel = 'panda_link0'
+
+        # Look up for the transformation between target_frame and turtle2 frames
+        # and send velocity commands for turtle2 to reach target_frame
+        try:
+            t = self.tf_buffer.lookup_transform(
+                to_frame_rel,
+                from_frame_rel,
+                rclpy.time.Time())
+        except TransformException as ex:
+            self.get_logger().info(
+                f'Could not transform {to_frame_rel} to {from_frame_rel}: {ex}')
+            return
+
+        msg = Pose()
+        # Get the pose first
+        msg.position.x = t.transform.translation.x
+        msg.position.y = t.transform.translation.y
+        msg.position.z = t.transform.translation.z
+
+        self.publisher.publish(msg)
 
 
-def main(args=None):
-    rclpy.init(args=args)
+def main():
+    rclpy.init()
+    node = FrameListener()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
 
-    minimal_publisher = CartesianPosePublisher()
-
-    rclpy.spin(minimal_publisher)
-
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
-    minimal_publisher.destroy_node()
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
-    main()
+main()
