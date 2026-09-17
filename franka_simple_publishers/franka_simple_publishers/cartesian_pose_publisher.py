@@ -1,6 +1,6 @@
 import math
 
-from geometry_msgs.msg import Pose, Point, Quaternion
+from geometry_msgs.msg import PoseStamped, Point, Quaternion
 
 import rclpy
 from rclpy.node import Node
@@ -16,17 +16,17 @@ class FrameListener(Node):
     def __init__(self):
         super().__init__('tf_translator')
 
-        self.get_logger().info("AAA")
+        self.get_logger().info("Initializing TF to Pose Translator...")
 
         # Declare and acquire `target_frame` parameter
         self.target_frame = self.declare_parameter(
-          'target_frame', 'panda_link8').get_parameter_value().string_value
+          'target_frame', 'panda_hand').get_parameter_value().string_value
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
         # Create turtle2 velocity publisher
-        self.publisher = self.create_publisher(Pose, 'test/pose', 1)
+        self.publisher = self.create_publisher(PoseStamped, 'test/pose', 1)
 
         # Call on_timer function every second
         self.timer = self.create_timer(1.0, self.on_timer)
@@ -49,13 +49,23 @@ class FrameListener(Node):
                 f'Could not transform {to_frame_rel} to {from_frame_rel}: {ex}')
             return
 
-        msg = Pose()
+        msg = PoseStamped()
+        # Header data
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = self.target_frame
         # Get the pose first
-        msg.position.x = t.transform.translation.x
-        msg.position.y = t.transform.translation.y
-        msg.position.z = t.transform.translation.z
+        msg.pose.position.x = t.transform.translation.x
+        msg.pose.position.y = t.transform.translation.y
+        msg.pose.position.z = t.transform.translation.z
+        # Now screw with the rotation
+        msg.pose.orientation.x = t.transform.rotation.x
+        msg.pose.orientation.y = t.transform.rotation.y
+        msg.pose.orientation.z = t.transform.rotation.z
+        msg.pose.orientation.w = t.transform.rotation.w
 
         self.publisher.publish(msg)
+
+        self.get_logger().info('published data to /test/pose')
 
 
 def main():
