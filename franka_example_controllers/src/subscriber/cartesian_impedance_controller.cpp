@@ -33,6 +33,7 @@ inline void pseudoInverse(const Eigen::MatrixXd& M_, Eigen::MatrixXd& M_pinv_, b
 
 namespace franka_example_controllers {
 
+// Define the output of the controller
 controller_interface::InterfaceConfiguration
 CartesianImpedanceController::command_interface_configuration() const {
   controller_interface::InterfaceConfiguration config;
@@ -44,6 +45,7 @@ CartesianImpedanceController::command_interface_configuration() const {
   return config;
 }
 
+// Define the robot monitoring points
 controller_interface::InterfaceConfiguration
 CartesianImpedanceController::state_interface_configuration() const {
   controller_interface::InterfaceConfiguration config;

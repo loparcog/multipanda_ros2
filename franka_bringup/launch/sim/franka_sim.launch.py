@@ -93,8 +93,7 @@ def generate_launch_description():
     rviz_file = os.path.join(get_package_share_directory('franka_description'), 'rviz',
                              'visualize_franka.rviz')
 
-    # RosBridge
-    
+    # Rosbridge    
     rosbridge_server = IncludeLaunchDescription(
         FrontendLaunchDescriptionSource(
             os.path.join( get_package_share_directory('rosbridge_server'),
@@ -163,6 +162,14 @@ def generate_launch_description():
             arguments=['cartesian_impedance_controller', '-c', concatenate_ns(ns, 'controller_manager', True)],
             output='screen',
         ),
-        # RosBridge Initialization
-        rosbridge_server
+
+        # Rosbridge Initialization
+        rosbridge_server,
+
+        # Position Publisher
+        Node(
+            package='tf2_publisher',
+            executable='franka_pub',
+            name='tf2listener'
+        )
     ])
