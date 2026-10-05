@@ -5,8 +5,6 @@ from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
-from launch.actions import ExecuteProcess
-import xacro
 from moveit_configs_utils import MoveItConfigsBuilder
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration
 from launch.launch_description_sources import FrontendLaunchDescriptionSource
@@ -119,6 +117,15 @@ def generate_launch_description():
     servo_yaml = load_yaml("franka_moveit_config", "config/sim_panda_servo.yaml")
     servo_params = {"moveit_servo": servo_yaml}
 
+    servo_service_launch = ExecuteProcess(
+        cmd=[
+            [FindExecutable(name="ros2"),
+            " service call ",
+            "/servo_node/start_servo ",
+            "std_srvs/srv/Trigger"]
+        ], shell=True
+    )
+
     # RViz
     # TODO: Review this config and compare with original
     rviz_config_file = (
@@ -158,28 +165,32 @@ def generate_launch_description():
             }.items()
         )
 
-    # Trajectory Execution Functionality
-    moveit_simple_controllers_yaml = load_yaml(
-        'franka_moveit_config', 'config/panda_controllers.yaml'
-    )
-    moveit_controllers = {
-        'moveit_simple_controller_manager': moveit_simple_controllers_yaml,
-        'moveit_controller_manager': 'moveit_simple_controller_manager'
-                                     '/MoveItSimpleControllerManager',
-    }
-
-    # Load controllers
-    load_controllers = []
-    for controller in ['panda_arm_controller', 'joint_state_broadcaster']:
-        load_controllers += [
-            ExecuteProcess(
-                cmd=['ros2 run controller_manager spawner {}'.format(controller)],
-                shell=True,
-                output='screen',
-            )
-        ]
-
     # Joint State Publisher
+    joint_state_broadcaster_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=[
+            "joint_state_broadcaster",
+            "--controller-manager-timeout",
+            "300",
+            "--controller-manager",
+            "/controller_manager",
+        ],
+    )
+
+    # Panda Arm Spawner
+    panda_arm_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=[
+            "panda_arm_controller",
+            "--controller-manager-timeout",
+            "300",
+            "--controller-manager",
+            "/controller_manager",
+        ],
+    )
+
     jsp_source_list = [concatenate_ns('', 'joint_states', True)]
     if(load_gripper):
         jsp_source_list.append(concatenate_ns('', 'panda_gripper_sim_node/joint_states', True))
@@ -191,7 +202,7 @@ def generate_launch_description():
             namespace= "",
             parameters=[
                 {'source_list': jsp_source_list,
-                    'rate': 30}],
+                 'rate': 30}],
     )
     ###
     
@@ -227,16 +238,18 @@ def generate_launch_description():
                 name="static_tf2_broadcaster",
                 parameters=[{"child_frame_id": "/panda_link0", "frame_id": "/world"}],
             ),
-            ComposableNode(
-                package="moveit_servo",
-                plugin="moveit_servo::JoyToServoPub",
-                name="controller_to_servo_node",
-            ),
-            ComposableNode(
-                package="joy",
-                plugin="joy::Joy",
-                name="joy_node",
-            )
+            # To enable controller use (STRANGE JERK AT START, TEST THOROUGHLY BEFORE USING ON HARDWARE)
+            # ComposableNode(
+            #     package="moveit_servo",
+            #     plugin="moveit_servo::JoyToServoPub",
+            #     name="controller_to_servo_node",
+            # ),
+            
+            # ComposableNode(
+            #     package="joy",
+            #     plugin="joy::Joy",
+            #     name="joy_node",
+            # )
         ],
         output="screen",
     )
@@ -249,7 +262,7 @@ def generate_launch_description():
             servo_params,
             robot_description,
             robot_description_semantic,
-            kinematics_yaml,
+            kinematics_yaml
         ],
         output="screen",
     )
@@ -293,6 +306,10 @@ def generate_launch_description():
             container,
             # CUSTOM
             rosbridge_server,
-            joint_state_publisher
+            joint_state_broadcaster_spawner,
+            panda_arm_spawner,
+            joint_state_publisher,
+            servo_service_launch
         ]
+        # Add list of controllers
     )
