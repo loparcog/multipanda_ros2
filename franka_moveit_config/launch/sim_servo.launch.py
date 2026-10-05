@@ -269,17 +269,24 @@ def generate_launch_description():
 
     # RosBridge
     rosbridge_server = IncludeLaunchDescription(
-            FrontendLaunchDescriptionSource(
-                os.path.join( get_package_share_directory('rosbridge_server'),
-                    'launch', 'rosbridge_websocket_launch.xml')
-            ),
-            launch_arguments={
-                'port': '9090',
-                # Additional parameters can be added here, for example:
-                # 'address': '',
-                # 'ssl': 'false'
-            }.items()
-        )
+        FrontendLaunchDescriptionSource(
+            os.path.join( get_package_share_directory('rosbridge_server'),
+                'launch', 'rosbridge_websocket_launch.xml')
+        ),
+        launch_arguments={
+            'port': '9090',
+            # Additional parameters can be added here, for example:
+            # 'address': '',
+            # 'ssl': 'false'
+        }.items()
+    )
+
+    # End effector pose publisher
+    pospub = Node(
+        package='tf2_publisher',
+        executable='franka_pub',
+        name='tf2listener'
+    )
 
     ###
     # ARGS
@@ -309,7 +316,8 @@ def generate_launch_description():
             joint_state_broadcaster_spawner,
             panda_arm_spawner,
             joint_state_publisher,
-            servo_service_launch
+            servo_service_launch,
+            pospub
         ]
         # Add list of controllers
     )
