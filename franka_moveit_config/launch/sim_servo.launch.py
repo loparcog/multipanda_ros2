@@ -140,6 +140,7 @@ def generate_launch_description():
         parameters=[
             robot_description,
             robot_description_semantic,
+            {'use_sim_time': True},
         ],
     )
 
@@ -202,7 +203,8 @@ def generate_launch_description():
             namespace= "",
             parameters=[
                 {'source_list': jsp_source_list,
-                 'rate': 30}],
+                 'rate': 100,
+                 'use_sim_time': True}],
     )
     ###
     
@@ -230,13 +232,13 @@ def generate_launch_description():
                 package="robot_state_publisher",
                 plugin="robot_state_publisher::RobotStatePublisher",
                 name="robot_state_publisher",
-                parameters=[robot_description],
+                parameters=[robot_description, {'use_sim_time': True}],
             ),
             ComposableNode(
                 package="tf2_ros",
                 plugin="tf2_ros::StaticTransformBroadcasterNode",
                 name="static_tf2_broadcaster",
-                parameters=[{"child_frame_id": "/panda_link0", "frame_id": "/world"}],
+                parameters=[{"child_frame_id": "/panda_link0", "frame_id": "/world", "use_sim_time": True}],
             ),
             # To enable controller use (STRANGE JERK AT START, TEST THOROUGHLY BEFORE USING ON HARDWARE)
             # ComposableNode(
@@ -262,7 +264,8 @@ def generate_launch_description():
             servo_params,
             robot_description,
             robot_description_semantic,
-            kinematics_yaml
+            kinematics_yaml,
+            {'use_sim_time': True},
         ],
         output="screen",
     )
@@ -285,7 +288,8 @@ def generate_launch_description():
     pospub = Node(
         package='tf2_publisher',
         executable='franka_pub',
-        name='tf2listener'
+        name='tf2listener',
+        parameters=[{'use_sim_time': True}],
     )
 
     ###
