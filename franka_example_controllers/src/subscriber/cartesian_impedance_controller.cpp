@@ -136,6 +136,7 @@ controller_interface::return_type CartesianImpedanceController::update(
   // n_stiffness * (desired_qn - q) -> Proportional control for redundant joints
   // (2.0 * sqrt(n_stiffness)) * qD -> Damping control for redundant joints
 
+  // TODO: Envelope ramp and decel
   // Calculating the final torque command (combining task and nullspace)
   tau_d << tau_task + coriolis + tau_nullspace;
   // tau_task -> Main control effort (position and orientation)
@@ -259,6 +260,7 @@ CallbackReturn CartesianImpedanceController::on_activate(
   // This is also a 6x6 matrix:
   // - Top-left 3x3 for position damping.
   // - Bottom-right 3x3 for orientation damping.
+  // TODO: Play with damping, underdamped
   damping.setIdentity();
   damping.topLeftCorner(3, 3) << 2 * sqrt(pos_stiff) * Matrix3d::Identity();   // Position damping (critical damping)
   damping.bottomRightCorner(3, 3) << 0.8 * 2 * sqrt(rot_stiff) * Matrix3d::Identity(); // Orientation damping (slightly underdamped)

@@ -16,7 +16,8 @@ mujoco_server:
 use_gazebo: false # Whether the robot is started in a Gazebo simulation environment
 
 ## Properties of incoming commands
-command_in_type: "unitless" # "unitless"> in the range [-1:1], as if from joystick. "speed_units"> cmds are in m/s and rad/s
+command_in_type: "speed_units" # "unitless"> in the range [-1:1], as if from joystick. "speed_units"> cmds are in m/s and rad/s
+# "speed_units" > direct angular velocities, non-normalized
 scale:
   # Scale parameters are only used if command_in_type=="unitless"
   linear:  0.4  # Max linear velocity. Unit is [m/s]. Only used for Cartesian commands.

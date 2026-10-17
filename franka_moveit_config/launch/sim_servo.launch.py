@@ -111,6 +111,9 @@ def generate_launch_description():
     kinematics_yaml = load_yaml(
         'franka_moveit_config', 'config/kinematics.yaml'
     )
+    robot_description_kinematics = {
+        'robot_description_kinematics': kinematics_yaml
+    }
     ###
 
     # Get parameters for the Servo node
@@ -124,24 +127,6 @@ def generate_launch_description():
             "/servo_node/start_servo ",
             "std_srvs/srv/Trigger"]
         ], shell=True
-    )
-
-    # RViz
-    # TODO: Review this config and compare with original
-    rviz_config_file = (
-        get_package_share_directory("franka_moveit_config") + "/rviz/servo.rviz"
-    )
-    rviz_node = Node(
-        package="rviz2",
-        executable="rviz2",
-        name="rviz2",
-        output="log",
-        arguments=["-d", rviz_config_file],
-        parameters=[
-            robot_description,
-            robot_description_semantic,
-            {'use_sim_time': True},
-        ],
     )
 
     ###
@@ -239,19 +224,7 @@ def generate_launch_description():
                 plugin="tf2_ros::StaticTransformBroadcasterNode",
                 name="static_tf2_broadcaster",
                 parameters=[{"child_frame_id": "/panda_link0", "frame_id": "/world", "use_sim_time": True}],
-            ),
-            # To enable controller use (STRANGE JERK AT START, TEST THOROUGHLY BEFORE USING ON HARDWARE)
-            # ComposableNode(
-            #     package="moveit_servo",
-            #     plugin="moveit_servo::JoyToServoPub",
-            #     name="controller_to_servo_node",
-            # ),
-            
-            # ComposableNode(
-            #     package="joy",
-            #     plugin="joy::Joy",
-            #     name="joy_node",
-            # )
+            )
         ],
         output="screen",
     )
@@ -264,7 +237,7 @@ def generate_launch_description():
             servo_params,
             robot_description,
             robot_description_semantic,
-            kinematics_yaml,
+            robot_description_kinematics,
             {'use_sim_time': True},
         ],
         output="screen",
@@ -311,7 +284,7 @@ def generate_launch_description():
         [   
             arm_id_arg,
             initial_position_arg,
-            rviz_node,
+            #rviz_node,
             mujoco_ros2_node,
             servo_node,
             container,

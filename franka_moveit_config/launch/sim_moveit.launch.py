@@ -111,6 +111,9 @@ def generate_launch_description():
     kinematics_yaml = load_yaml(
         'franka_moveit_config', 'config/kinematics.yaml'
     )
+    robot_description_kinematics = {
+        'robot_description_kinematics': kinematics_yaml
+    }
 
     # Planning Functionality
     ompl_planning_pipeline_config = {
@@ -152,6 +155,8 @@ def generate_launch_description():
         'publish_geometry_updates': True,
         'publish_state_updates': True,
         'publish_transforms_updates': True,
+        'publish_robot_description': True,
+        'publish_robot_description_semantic': True
     }
 
     # Start the actual move_group node/action server
@@ -162,7 +167,7 @@ def generate_launch_description():
         parameters=[
             robot_description,
             robot_description_semantic,
-            kinematics_yaml,
+            robot_description_kinematics,
             ompl_planning_pipeline_config,
             trajectory_execution,
             moveit_controllers,
@@ -184,7 +189,7 @@ def generate_launch_description():
             robot_description,
             robot_description_semantic,
             ompl_planning_pipeline_config,
-            kinematics_yaml,
+            robot_description_kinematics,
         ],
     )
 
@@ -255,6 +260,18 @@ def generate_launch_description():
                  'rate': 30}],
     )
 
+    cartesian_node = Node(
+        package='moveit_cartesian',
+        executable='moveit_cartesian',
+        name='cartesian_pose_subscriber',
+        output='screen',
+        parameters=[
+            robot_description,
+            robot_description_semantic,
+            robot_description_kinematics,
+        ],
+    )
+
     
     # Launch arguments
     arm_id_arg = DeclareLaunchArgument(
@@ -277,7 +294,8 @@ def generate_launch_description():
          run_move_group_node,
          mujoco_ros2_node,
          mongodb_server_node,
-         joint_state_publisher
+         joint_state_publisher,
+         cartesian_node
          ]
         + load_controllers
     )
