@@ -18,7 +18,7 @@ class FrankaPublisher(Node):
 
         # Get frames to translate position to/from
         self.target_frame = self.declare_parameter(
-            'target_frame', 'panda_link7').get_parameter_value().string_value
+            'target_frame', 'panda_hand_tcp').get_parameter_value().string_value
 
         self.base_frame = self.declare_parameter(
             'base_frame', 'panda_link0').get_parameter_value().string_value

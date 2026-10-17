@@ -262,7 +262,7 @@ def generate_launch_description():
 
     cartesian_node = Node(
         package='moveit_cartesian',
-        executable='moveit_cartesian',
+        executable='moveit_trajectory',
         name='cartesian_pose_subscriber',
         output='screen',
         parameters=[
@@ -270,6 +270,31 @@ def generate_launch_description():
             robot_description_semantic,
             robot_description_kinematics,
         ],
+    )
+
+    # Position Publisher
+    tf2_pose = Node(
+        package='tf2_publisher',
+        executable='franka_pub',
+        name='tf2listener',
+        parameters=[
+            # panda_link8 for end of arm (target in sim), panda_hand_tcp for end tip
+            {"target_frame": "panda_link8"}
+        ]
+    )
+
+    # RosBridge Server
+    rosbridge_server = IncludeLaunchDescription(
+        FrontendLaunchDescriptionSource(
+            os.path.join( get_package_share_directory('rosbridge_server'),
+                'launch', 'rosbridge_websocket_launch.xml')
+        ),
+        launch_arguments={
+            'port': '9090',
+            # Additional parameters can be added here, for example:
+            # 'address': '',
+            # 'ssl': 'false'
+        }.items()
     )
 
     
@@ -295,7 +320,9 @@ def generate_launch_description():
          mujoco_ros2_node,
          mongodb_server_node,
          joint_state_publisher,
-         cartesian_node
+         cartesian_node,
+         tf2_pose,
+         rosbridge_server
          ]
         + load_controllers
     )

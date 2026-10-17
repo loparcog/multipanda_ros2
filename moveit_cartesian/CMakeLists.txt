@@ -8,20 +8,34 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
+find_package(moveit_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 
-add_executable(moveit_cartesian src/moveit_cartesian.cpp)
-target_include_directories(moveit_cartesian PUBLIC
+add_executable(moveit_pose src/moveit_pose.cpp)
+target_include_directories(moveit_pose PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_compile_features(moveit_cartesian PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(moveit_pose PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 ament_target_dependencies(
-  moveit_cartesian
+  moveit_pose
   "moveit_ros_planning_interface"
+  moveit_msgs
   "rclcpp"
 )
 
-install(TARGETS moveit_cartesian
+add_executable(moveit_trajectory src/moveit_trajectory.cpp)
+target_include_directories(moveit_trajectory PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(moveit_trajectory PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  moveit_trajectory
+  "moveit_ros_planning_interface"
+  moveit_msgs
+  "rclcpp"
+)
+
+install(TARGETS moveit_pose moveit_trajectory
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
