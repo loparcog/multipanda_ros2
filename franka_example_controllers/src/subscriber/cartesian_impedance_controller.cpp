@@ -165,6 +165,12 @@ CallbackReturn CartesianImpedanceController::on_init() {
     // Declaring a parameter "rot_stiff" (rotation stiffness) with a default value of 10
     auto_declare<double>("rot_stiff", 10);
 
+    // Declaring a parameter "pos_damp" (position damping) with a default value of 1 (critical damping)
+    auto_declare<double>("pos_damp", 1);
+
+    // Declaring a parameter "rot_damp" (rotation damping) with a default value of 0.8 (slightly underdamped)
+    auto_declare<double>("rot_damp", 0.8);
+
     // Creating a subscription to the topic "/cartesian_impedance/pose_desired"
     // This means the controller will listen for messages (target positions/orientations) on this topic
     sub_desired_cartesian_ = get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
@@ -206,6 +212,14 @@ CallbackReturn CartesianImpedanceController::on_configure(
 
   // Retrieving the value of the "rot_stiff" (rotation stiffness) parameter
   rot_stiff = get_node()->get_parameter("rot_stiff").as_double();
+
+  // Retrieving the value of the "pos_damp" (position damping) parameter
+  pos_damp = get_node()->get_parameter("pos_damp").as_double();
+
+  // Retrieving the value of the "rot_damp" (rotation damping) parameter
+  rot_damp = get_node()->get_parameter("rot_damp").as_double();
+
+
 
 
   
@@ -260,10 +274,9 @@ CallbackReturn CartesianImpedanceController::on_activate(
   // This is also a 6x6 matrix:
   // - Top-left 3x3 for position damping.
   // - Bottom-right 3x3 for orientation damping.
-  // TODO: Play with damping, underdamped
   damping.setIdentity();
-  damping.topLeftCorner(3, 3) << 2 * sqrt(pos_stiff) * Matrix3d::Identity();   // Position damping (critical damping)
-  damping.bottomRightCorner(3, 3) << 0.8 * 2 * sqrt(rot_stiff) * Matrix3d::Identity(); // Orientation damping (slightly underdamped)
+  damping.topLeftCorner(3, 3) << pos_damp * 2 * sqrt(pos_stiff) * Matrix3d::Identity();   // Position damping (critical damping at default)
+  damping.bottomRightCorner(3, 3) << rot_damp * 2 * sqrt(rot_stiff) * Matrix3d::Identity(); // Orientation damping (slightly underdamped at default)
 
   // Setting the nullspace stiffness (affects how the robot behaves in redundant joints)
   // Affects how the arm behaves while still following the end-effector target
@@ -288,12 +301,20 @@ rcl_interfaces::msg::SetParametersResult CartesianImpedanceController::parameter
     if (param.get_name() == "pos_stiff") {
       pos_stiff = param.as_double();
       stiffness.topLeftCorner(3, 3) = pos_stiff * Matrix3d::Identity();
-      damping.topLeftCorner(3, 3) = 2 * sqrt(pos_stiff) * Matrix3d::Identity();
+      damping.topLeftCorner(3, 3) = pos_damp * 2 * sqrt(pos_stiff) * Matrix3d::Identity();
     }
     if (param.get_name() == "rot_stiff") {
       rot_stiff = param.as_double();
       stiffness.bottomRightCorner(3, 3) = rot_stiff * Matrix3d::Identity();
-      damping.bottomRightCorner(3, 3) = 0.8 * 2 * sqrt(rot_stiff) * Matrix3d::Identity();
+      damping.bottomRightCorner(3, 3) = rot_damp * 2 * sqrt(rot_stiff) * Matrix3d::Identity();
+    }
+    if (param.get_name() == "pos_damp") {
+      pos_damp = param.as_double();
+      damping.topLeftCorner(3, 3) = pos_damp * 2 * sqrt(pos_stiff) * Matrix3d::Identity();
+    }
+    if (param.get_name() == "rot_damp") {
+      rot_damp = param.as_double();
+      damping.bottomRightCorner(3, 3) = rot_damp * 2 * sqrt(rot_stiff) * Matrix3d::Identity();
     }
   }
   rcl_interfaces::msg::SetParametersResult result;

@@ -51,6 +51,8 @@ class CartesianImpedanceController : public controller_interface::ControllerInte
   Matrix6d damping;
   double pos_stiff;
   double rot_stiff;
+  double pos_damp;
+  double rot_damp;
   double n_stiffness;
 
   void desiredCartesianCallback(const std_msgs::msg::Float64MultiArray& msg);

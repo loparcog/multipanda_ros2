@@ -262,7 +262,7 @@ def generate_launch_description():
 
     cartesian_node = Node(
         package='moveit_cartesian',
-        executable='moveit_trajectory',
+        executable='moveit_pose',
         name='cartesian_pose_subscriber',
         output='screen',
         parameters=[
