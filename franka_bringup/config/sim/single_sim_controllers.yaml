@@ -78,8 +78,8 @@ cartesian_impedance_controller:
     arm_id: panda
     pos_stiff: 2000.0
     rot_stiff: 2000.0
-    pos_damp: 0.001
-    rot_damp: 0.001
+    pos_damp: 0.01
+    rot_damp: 0.01
   
 multi_mode_controller:
   ros__parameters:
