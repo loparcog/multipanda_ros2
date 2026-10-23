@@ -1,4 +1,3 @@
-#include <memory>
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <moveit/move_group_interface/move_group_interface.h>
@@ -8,6 +7,7 @@
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit_msgs/msg/collision_object.hpp>
 #include <moveit_msgs/msg/attached_collision_object.hpp>
+#include <string>
 
 class CartesianPoseSubscriber : public rclcpp::Node
 {
@@ -21,37 +21,21 @@ public:
 
     // Set solver (PRM seems to work best with collision, and is quite fast)
     move_group->setPlannerId("PRMstarkConfigDefault");
-    move_group->setPlanningTime(15.0);
+    move_group->setPlanningTime(5.0);
 
     // Make floor
-    moveit_msgs::msg::CollisionObject floor;
-    floor.header.frame_id = move_group->getPlanningFrame();  // typically panda_link0
-    floor.id = "floor";
+    geometry_msgs::msg::Pose poseFloor;
+    poseFloor.position.z = -0.05;             // top face is at z=0.15
+    poseFloor.orientation.w = 1.0;
 
-    shape_msgs::msg::SolidPrimitive box;
-    box.type = shape_msgs::msg::SolidPrimitive::BOX;
-    box.dimensions = {4.0, 4.0, 0.10};  // x, y, z size
+    createCollisionBox("floor", 4.0, 4.0, 0.10, poseFloor);
 
-    geometry_msgs::msg::Pose pose;
-    pose.position.z = -0.05;             // top face is at z=0.15
-    pose.orientation.w = 1.0;
+    // Make wall
+    geometry_msgs::msg::Pose poseWall;
+    poseWall.position.x = -0.5;
+    poseWall.orientation.w = 1.0;
 
-    floor.primitives.push_back(box);
-    floor.primitive_poses.push_back(pose);
-    floor.operation = moveit_msgs::msg::CollisionObject::ADD;
-
-    if (!planning_scene_interface.applyCollisionObject(floor)) {
-      RCLCPP_ERROR(get_logger(), "Failed to add floor to the planning scene");
-    }
-
-    moveit_msgs::msg::AttachedCollisionObject acm;
-    acm.link_name = "panda_link0";
-    acm.object.id = "floor";
-    acm.object.operation = moveit_msgs::msg::CollisionObject::ADD;
-    acm.touch_links = {"panda_link0", "panda_link1"};
-    planning_scene_interface.applyAttachedCollisionObject(acm);
-
-
+    createCollisionBox("wall", 0.10, 2.0, 2.0, poseWall);
 
     // Subscribed topic name
     subscription = this->create_subscription<geometry_msgs::msg::Pose>(
@@ -106,6 +90,32 @@ private:
     } else {
       RCLCPP_ERROR(this->get_logger(), "Motion planning failed for the target pose!");
     }
+  }
+
+  void createCollisionBox(std::string id, double l, double w, double h, geometry_msgs::msg::Pose pose)
+  {
+    moveit_msgs::msg::CollisionObject colObj;
+    colObj.header.frame_id = move_group->getPlanningFrame();  // typically panda_link0
+    colObj.id = id;
+
+    shape_msgs::msg::SolidPrimitive box;
+    box.type = shape_msgs::msg::SolidPrimitive::BOX;
+    box.dimensions = {l, w, h};  // x, y, z size
+
+    colObj.primitives.push_back(box);
+    colObj.primitive_poses.push_back(pose);
+    colObj.operation = moveit_msgs::msg::CollisionObject::ADD;
+
+    if (!planning_scene_interface.applyCollisionObject(colObj)) {
+      RCLCPP_ERROR(this->get_logger(), "Failed to add floor to the planning scene");
+    }
+
+    moveit_msgs::msg::AttachedCollisionObject acm;
+    acm.link_name = "panda_link0";
+    acm.object.id = id;
+    acm.object.operation = moveit_msgs::msg::CollisionObject::ADD;
+    acm.touch_links = {"panda_link0", "panda_link1"};
+    planning_scene_interface.applyAttachedCollisionObject(acm);
   }
 };
 

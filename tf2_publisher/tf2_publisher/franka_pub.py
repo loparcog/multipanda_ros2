@@ -26,6 +26,10 @@ class FrankaPublisher(Node):
         # Set the output topic
         self.pub_topic = self.declare_parameter(
             'topic', 'tf/pose').get_parameter_value().string_value
+        
+        # Set an output hz rate
+        self.pub_hz = self.declare_parameter(
+            'hz', 1.0).get_parameter_value().double_value    
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -37,7 +41,7 @@ class FrankaPublisher(Node):
         self.get_logger().info(f'Publishing from {self.target_frame} to {self.base_frame} on topic {self.pub_topic}')
 
         # Call on_timer function every second
-        self.timer = self.create_timer(1.0, self.on_timer)
+        self.timer = self.create_timer(1.0/self.pub_hz, self.on_timer)
 
     def on_timer(self):
         # Store frame names in variables that will be used to

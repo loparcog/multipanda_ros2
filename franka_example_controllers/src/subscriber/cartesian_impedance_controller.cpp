@@ -138,7 +138,7 @@ controller_interface::return_type CartesianImpedanceController::update(
 
   // TODO: Envelope ramp and decel
   // Calculating the final torque command (combining task and nullspace)
-  tau_d << tau_task + coriolis + tau_nullspace;
+  tau_d << (tau_task + coriolis + tau_nullspace)/100;
   // tau_task -> Main control effort (position and orientation)
   // coriolis -> Compensates for dynamic forces
   // tau_nullspace -> Controls redundant degrees of freedom

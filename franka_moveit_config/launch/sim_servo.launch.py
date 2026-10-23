@@ -262,7 +262,7 @@ def generate_launch_description():
         package='tf2_publisher',
         executable='franka_pub',
         name='tf2listener',
-        parameters=[{'use_sim_time': True}],
+        parameters=[{'use_sim_time': True, 'hz': 10.0}],
     )
 
     ###
