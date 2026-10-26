@@ -138,7 +138,7 @@ controller_interface::return_type CartesianImpedanceController::update(
 
   // TODO: Envelope ramp and decel
   // Calculating the final torque command (combining task and nullspace)
-  tau_d << (tau_task + coriolis + tau_nullspace)/100;
+  tau_d << (tau_task/1000) + coriolis + tau_nullspace;
   // tau_task -> Main control effort (position and orientation)
   // coriolis -> Compensates for dynamic forces
   // tau_nullspace -> Controls redundant degrees of freedom
@@ -330,8 +330,8 @@ rcl_interfaces::msg::SetParametersResult CartesianImpedanceController::parameter
 void CartesianImpedanceController::desiredCartesianCallback(
     const std_msgs::msg::Float64MultiArray& msg) {
 
-  // Check if the incoming message has valid data (non-zero at the first index)
-  if (msg.data[0]) {
+  // Check if the incoming message has valid data (non-zero at all index)
+  if (msg.data[0] and msg.data[1] and msg.data[2]) {
 
     // Update the desired position (X, Y, Z) of the end-effector
     for (auto i = 0; i < 3; ++i) {
