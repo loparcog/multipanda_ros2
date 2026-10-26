@@ -42,35 +42,30 @@ def load_yaml(package_name, file_path):
 
 def generate_launch_description():
     robot_ip_parameter_name = 'robot_ip'
-    use_fake_hardware_parameter_name = 'use_fake_hardware'
     load_gripper_parameter_name = 'load_gripper'
+    use_fake_hardware_parameter_name = 'use_fake_hardware'
     fake_sensor_commands_parameter_name = 'fake_sensor_commands'
+    # RViz is required to operate, so no option to launch without it
 
     robot_ip = LaunchConfiguration(robot_ip_parameter_name)
-    use_fake_hardware = LaunchConfiguration(use_fake_hardware_parameter_name)
     load_gripper = LaunchConfiguration(load_gripper_parameter_name)
+    use_fake_hardware = LaunchConfiguration(use_fake_hardware_parameter_name)
     fake_sensor_commands = LaunchConfiguration(fake_sensor_commands_parameter_name)
 
-
-    # Command-line arguments
-
-    db_arg = DeclareLaunchArgument(
-        'db', default_value='False', description='Database flag'
-    )
-
-    # planning_context
-    franka_xacro_file = os.path.join(get_package_share_directory('franka_description'), 'robots',
+    franka_xacro_file = os.path.join(get_package_share_directory('franka_description'), 'robots', 'real',
                                      'panda_arm.urdf.xacro')
+
+    # Robot descriptions
     robot_description_config = Command(
         [FindExecutable(name='xacro'), ' ', franka_xacro_file, ' hand:=', load_gripper,
          ' robot_ip:=', robot_ip, ' use_fake_hardware:=', use_fake_hardware,
-         ' fake_sensor_commands:=', fake_sensor_commands])
-
+         ' fake_sensor_commands:=', fake_sensor_commands]
+    )
     robot_description = {'robot_description': robot_description_config}
 
     franka_semantic_xacro_file = os.path.join(get_package_share_directory('franka_moveit_config'),
-                                              'srdf',
-                                              'panda_arm.srdf.xacro')
+                                            'srdf',
+                                            'panda_arm.srdf.xacro')
     robot_description_semantic_config = Command(
         [FindExecutable(name='xacro'), ' ', franka_semantic_xacro_file, ' hand:=', load_gripper]
     )
@@ -84,6 +79,9 @@ def generate_launch_description():
     robot_description_kinematics = {
         'robot_description_kinematics': kinematics_yaml
     }
+
+    rviz_file = os.path.join(get_package_share_directory('franka_moveit_config'), 'rviz', 
+                             'moveit.rviz')
 
     # Planning Functionality
     ompl_planning_pipeline_config = {
@@ -127,137 +125,115 @@ def generate_launch_description():
         'publish_transforms_updates': True,
     }
 
-    # Start the actual move_group node/action server
-    run_move_group_node = Node(
-        package='moveit_ros_move_group',
-        executable='move_group',
-        output='screen',
-        parameters=[
-            robot_description,
-            robot_description_semantic,
-            robot_description_kinematics,
-            ompl_planning_pipeline_config,
-            trajectory_execution,
-            moveit_controllers,
-            planning_scene_monitor_parameters,
-        ],
-    )
-
-    # RViz
-    rviz_base = os.path.join(get_package_share_directory('franka_moveit_config'), 'rviz')
-    rviz_full_config = os.path.join(rviz_base, 'moveit.rviz')
-
-    rviz_node = Node(
-        package='rviz2',
-        executable='rviz2',
-        name='rviz2',
-        output='log',
-        arguments=['-d', rviz_full_config],
-        parameters=[
-            robot_description,
-            robot_description_semantic,
-            ompl_planning_pipeline_config,
-            robot_description_kinematics,
-        ],
-    )
-
-    # Publish TF
-    robot_state_publisher = Node(
-        package='robot_state_publisher',
-        executable='robot_state_publisher',
-        name='robot_state_publisher',
-        output='both',
-        parameters=[robot_description],
-    )
-
+    # Controller config
     ros2_controllers_path = os.path.join(
         get_package_share_directory('franka_moveit_config'),
         'config',
         'panda_ros_controllers.yaml',
     )
-    ros2_control_node = Node(
-        package='controller_manager',
-        executable='ros2_control_node',
-        parameters=[robot_description, ros2_controllers_path],
-        remappings=[('joint_states', 'franka/joint_states')],
-        output={
-            'stdout': 'screen',
-            'stderr': 'screen',
-        },
-        on_exit=Shutdown(),
-    )
 
-    # Load controllers
-    load_controllers = []
-    for controller in ['panda_arm_controller', 'joint_state_broadcaster']:
-        load_controllers += [
-            ExecuteProcess(
-                cmd=['ros2 run controller_manager spawner {}'.format(controller)],
-                shell=True,
-                output='screen',
-            )
-        ]
-
-    # Warehouse mongodb server
-    db_config = LaunchConfiguration('db')
-    mongodb_server_node = Node(
-        package='warehouse_ros_mongo',
-        executable='mongo_wrapper_ros.py',
-        parameters=[
-            {'warehouse_port': 33829},
-            {'warehouse_host': 'localhost'},
-            {'warehouse_plugin': 'warehouse_ros_mongo::MongoDatabaseConnection'},
-        ],
-        output='screen',
-        condition=IfCondition(db_config)
-    )
-
-    joint_state_publisher = Node(
-        package='joint_state_publisher',
-        executable='joint_state_publisher',
-        name='joint_state_publisher',
-        parameters=[
-            {'source_list': ['franka/joint_states', 'panda_gripper/joint_states'], 'rate': 30}],
-    )
-    robot_arg = DeclareLaunchArgument(
-        robot_ip_parameter_name,
-        description='Hostname or IP address of the robot.')
-
-    use_fake_hardware_arg = DeclareLaunchArgument(
-        use_fake_hardware_parameter_name,
-        default_value='false',
-        description='Use fake hardware')
-    load_gripper_arg = DeclareLaunchArgument(
-            load_gripper_parameter_name,
+    return LaunchDescription([
+        # Launch arguments
+        DeclareLaunchArgument(
+            robot_ip_parameter_name,
+            description='Hostname or IP address of the robot.'),
+        DeclareLaunchArgument(
+            use_fake_hardware_parameter_name,
             default_value='false',
+            description='Use fake hardware'),
+        DeclareLaunchArgument(
+            fake_sensor_commands_parameter_name,
+            default_value='false',
+            description="Fake sensor commands. Only valid when '{}' is true".format(
+                use_fake_hardware_parameter_name)),
+        DeclareLaunchArgument(
+            load_gripper_parameter_name,
+            default_value='true',
             description='Use Franka Gripper as an end-effector, otherwise, the robot is loaded '
-                        'without an end-effector.')
-    
-    fake_sensor_commands_arg = DeclareLaunchArgument(
-        fake_sensor_commands_parameter_name,
-        default_value='false',
-        description="Fake sensor commands. Only valid when '{}' is true".format(
-            use_fake_hardware_parameter_name))
-    gripper_launch_file = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([PathJoinSubstitution(
-            [FindPackageShare('franka_gripper'), 'launch', 'gripper.launch.py'])]),
-        launch_arguments={'robot_ip': robot_ip,
-                          use_fake_hardware_parameter_name: use_fake_hardware}.items(),
-        condition=IfCondition(load_gripper)
-    )
-    return LaunchDescription(
-        [robot_arg,
-         use_fake_hardware_arg,
-         fake_sensor_commands_arg,
-         load_gripper_arg,
-         db_arg,
-         rviz_node,
-         robot_state_publisher,
-         run_move_group_node,
-         ros2_control_node,
-         mongodb_server_node,
-         joint_state_publisher,
-         gripper_launch_file
-         ]
-        + load_controllers
-    )
+                        'without an end-effector.'),
+        DeclareLaunchArgument(
+            'db', 
+            default_value='False', 
+            description='Database flag'
+        ),
+        Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            name='robot_state_publisher',
+            output='both',
+            parameters=[robot_description],
+        ),
+        Node(
+            package='joint_state_publisher',
+            executable='joint_state_publisher',
+            name='joint_state_publisher',
+            parameters=[
+                {'source_list': ['franka/joint_states', 'panda_gripper/joint_states'],
+                    'rate': 30}],
+        ),
+        Node(
+            package='moveit_ros_move_group',
+            executable='move_group',
+            output='screen',
+            parameters=[
+                robot_description,
+                robot_description_semantic,
+                robot_description_kinematics,
+                ompl_planning_pipeline_config,
+                trajectory_execution,
+                moveit_controllers,
+                planning_scene_monitor_parameters,
+            ],
+        ),
+        Node(
+            package='rviz2',
+            executable='rviz2',
+            name='rviz2',
+            output='log',
+            arguments=['-d', rviz_file],
+            parameters=[
+                robot_description,
+                robot_description_semantic,
+                ompl_planning_pipeline_config,
+                robot_description_kinematics,
+            ],
+        ),
+        Node(
+            package='franka_control2',
+            executable='franka_control2_node',
+            parameters=[{'robot_description': robot_description}, moveit_controllers],
+            remappings=[('joint_states', 'franka/joint_states')],
+            output={
+                'stdout': 'screen',
+                'stderr': 'screen',
+            },
+            on_exit=Shutdown(),
+        ),
+        Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            name='robot_state_publisher',
+            output='both',
+            parameters=[robot_description],
+        ),
+        Node(
+            package='controller_manager',
+            executable='spawner',
+            arguments=['panda_arm_controller'],
+            output='screen',
+        ),
+        Node(
+            package='controller_manager',
+            executable='spawner',
+            arguments=['joint_state_broadcaster'],
+            output='screen',
+        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([PathJoinSubstitution(
+                [FindPackageShare('franka_gripper'), 'launch', 'gripper.launch.py'])]),
+            launch_arguments={robot_ip_parameter_name: robot_ip,
+                              use_fake_hardware_parameter_name: use_fake_hardware}.items(),
+            condition=IfCondition(load_gripper)
+
+        ),
+    ])
