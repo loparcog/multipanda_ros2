@@ -24,6 +24,16 @@ panda_arm_controller:
       - panda_joint5
       - panda_joint6
       - panda_joint7
+    constraints:
+      stopped_velocity_tolerance: 0.05
+      goal_time: 1.0
+      panda_joint1: {trajectory: 0.2, goal: 0.05}
+      panda_joint2: {trajectory: 0.2, goal: 0.05}
+      panda_joint3: {trajectory: 0.2, goal: 0.05}
+      panda_joint4: {trajectory: 0.2, goal: 0.05}
+      panda_joint5: {trajectory: 0.2, goal: 0.05}
+      panda_joint6: {trajectory: 0.2, goal: 0.05}
+      panda_joint7: {trajectory: 0.2, goal: 0.05}
     gains:
       panda_joint1: { p: 600., d: 30., i: 0., i_clamp: 1., ff_velocity_scale: 1. }
       panda_joint2: { p: 600., d: 30., i: 0., i_clamp: 1., ff_velocity_scale: 1. }

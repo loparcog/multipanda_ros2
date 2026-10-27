@@ -201,7 +201,7 @@ def generate_launch_description():
         Node(
             package='franka_control2',
             executable='franka_control2_node',
-            parameters=[{'robot_description': robot_description}, moveit_controllers],
+            parameters=[robot_description, ros2_controllers_path],
             remappings=[('joint_states', 'franka/joint_states')],
             output={
                 'stdout': 'screen',
@@ -219,13 +219,23 @@ def generate_launch_description():
         Node(
             package='controller_manager',
             executable='spawner',
-            arguments=['panda_arm_controller'],
+            name='panda_arm_controller_spawner',
+            arguments=[
+                'panda_arm_controller',
+                '--controller-manager-timeout', '300',
+                '--controller-manager', '/controller_manager',
+            ],
             output='screen',
         ),
         Node(
             package='controller_manager',
             executable='spawner',
-            arguments=['joint_state_broadcaster'],
+            name='joint_state_broadcaster_spawner',
+            arguments=[
+                'joint_state_broadcaster',
+                '--controller-manager-timeout', '300',
+                '--controller-manager', '/controller_manager',
+            ],
             output='screen',
         ),
         IncludeLaunchDescription(
