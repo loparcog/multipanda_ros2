@@ -173,43 +173,176 @@ def generate_launch_description():
             name='joint_state_publisher',
             parameters=[
                 {'source_list': ['franka/joint_states', 'panda_gripper/joint_states'],
+                    'rate': 30}],
+        ),
+        Node(
+            package="moveit_servo",
+            executable="servo_node_main",
+            parameters=[
+                servo_params,
+                robot_description,
+                robot_description_semantic,
+                robot_description_kinematics,
+            ],
+            output="screen",
+        ),
+        # RosBridge
+        IncludeLaunchDescription(
+            FrontendLaunchDescriptionSource(
+                os.path.join( get_package_share_directory('rosbridge_server'),
+                    'launch', 'rosbridge_websocket_launch.xml')
+            ),
+            launch_arguments={
+                'port': '9090',
+                # Additional parameters can be added here, for example:
+                # 'address': '',
+                # 'ssl': 'false'
+            }.items()
+        ),
+        # End effector pose publisher
+        Node(
+            package='tf2_publisher',
+            executable='franka_pub',
+            name='tf2listener',
+            parameters=[{'hz': 10.0}],
+        ),
+        Node(
+            package='rviz2',
+            executable='rviz2',
+            name='rviz2',
+            output='log',
+            arguments=['-d', rviz_file],
+            parameters=[
+                robot_description,
+                robot_description_semantic,
+                ompl_planning_pipeline_config,
+                robot_description_kinematics,
+            ],
+        ),
+        Node(
+            package='franka_control2',
+            executable='franka_control2_node',
+            parameters=[robot_description, ros2_controllers_path],
+            remappings=[('joint_states', 'franka/joint_states')],
+            output={
+                'stdout': 'screen',
+                'stderr': 'screen',
+            },
+            on_exit=Shutdown(),
+        ),
+        Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            name='robot_state_publisher',
+            output='both',
+            parameters=[robot_description],
+        ),
+        Node(
+            package='controller_manager',
+            executable='spawner',
+            name='panda_arm_controller_spawner',
+            arguments=[
+                'panda_arm_controller',
+                '--controller-manager-timeout', '300',
+                '--controller-manager', '/controller_manager',
+            ],
+            output='screen',
+        ),
+        Node(
+            package='controller_manager',
+            executable='spawner',
+            name='joint_state_broadcaster_spawner',
+            arguments=[
+                'joint_state_broadcaster',
+                '--controller-manager-timeout', '300',
+                '--controller-manager', '/controller_manager',
+            ],
+            output='screen',
+        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([PathJoinSubstitution(
+                [FindPackageShare('franka_gripper'), 'launch', 'gripper.launch.py'])]),
+            launch_arguments={robot_ip_parameter_name: robot_ip,
+                                use_fake_hardware_parameter_name: use_fake_hardware}.items(),
+            condition=IfCondition(load_gripper)
+
+        ),
+    ])
+
+    return LaunchDescription([
+        # Launch arguments
+        DeclareLaunchArgument(
+            robot_ip_parameter_name,
+            description='Hostname or IP address of the robot.'),
+        DeclareLaunchArgument(
+            use_fake_hardware_parameter_name,
+            default_value='false',
+            description='Use fake hardware'),
+        DeclareLaunchArgument(
+            fake_sensor_commands_parameter_name,
+            default_value='false',
+            description="Fake sensor commands. Only valid when '{}' is true".format(
+                use_fake_hardware_parameter_name)),
+        DeclareLaunchArgument(
+            load_gripper_parameter_name,
+            default_value='true',
+            description='Use Franka Gripper as an end-effector, otherwise, the robot is loaded '
+                        'without an end-effector.'),
+        DeclareLaunchArgument(
+            'db', 
+            default_value='False', 
+            description='Database flag'
+        ),
+        Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            name='robot_state_publisher',
+            output='both',
+            parameters=[robot_description],
+        ),
+        Node(
+            package='joint_state_publisher',
+            executable='joint_state_publisher',
+            name='joint_state_publisher',
+            parameters=[
+                {'source_list': ['franka/joint_states', 'panda_gripper/joint_states'],
                     'rate': 30,
                     'use_sim_time': True}],
         ),
         # MoveIt Servo and associated containers
-        ComposableNodeContainer(
-            name="panda_servo",
-            namespace="/",
-            package="rclcpp_components",
-            executable="component_container_mt",
-            composable_node_descriptions=[
-                # Example of launching Servo as a node component
-                # Assuming ROS2 intraprocess communications works well, this is a more efficient way.
-                # ComposableNode(
-                #     package="moveit_servo",
-                #     plugin="moveit_servo::ServoServer",
-                #     name="servo_server",
-                #     parameters=[
-                #         servo_params,
-                #         moveit_config.robot_description,
-                #         moveit_config.robot_description_semantic,
-                #     ],
-                # ),
-                ComposableNode(
-                    package="robot_state_publisher",
-                    plugin="robot_state_publisher::RobotStatePublisher",
-                    name="robot_state_publisher",
-                    parameters=[robot_description, {'use_sim_time': True}],
-                ),
-                ComposableNode(
-                    package="tf2_ros",
-                    plugin="tf2_ros::StaticTransformBroadcasterNode",
-                    name="static_tf2_broadcaster",
-                    parameters=[{"child_frame_id": "/panda_link0", "frame_id": "/world", "use_sim_time": True}],
-                )
-            ],
-            output="screen",
-        ),
+        # ComposableNodeContainer(
+        #     name="panda_servo",
+        #     namespace="/",
+        #     package="rclcpp_components",
+        #     executable="component_container_mt",
+        #     composable_node_descriptions=[
+        #         # Example of launching Servo as a node component
+        #         # Assuming ROS2 intraprocess communications works well, this is a more efficient way.
+        #         # ComposableNode(
+        #         #     package="moveit_servo",
+        #         #     plugin="moveit_servo::ServoServer",
+        #         #     name="servo_server",
+        #         #     parameters=[
+        #         #         servo_params,
+        #         #         moveit_config.robot_description,
+        #         #         moveit_config.robot_description_semantic,
+        #         #     ],
+        #         # ),
+        #         ComposableNode(
+        #             package="robot_state_publisher",
+        #             plugin="robot_state_publisher::RobotStatePublisher",
+        #             name="robot_state_publisher",
+        #             parameters=[robot_description, {'use_sim_time': True}],
+        #         ),
+        #         ComposableNode(
+        #             package="tf2_ros",
+        #             plugin="tf2_ros::StaticTransformBroadcasterNode",
+        #             name="static_tf2_broadcaster",
+        #             parameters=[{"child_frame_id": "/panda_link0", "frame_id": "/world", "use_sim_time": True}],
+        #         )
+        #     ],
+        #     output="screen",
+        # ),
         # Launch a standalone Servo node.
         # As opposed to a node component, this may be necessary (for example) if Servo is running on a different PC
         Node(
@@ -260,7 +393,7 @@ def generate_launch_description():
         Node(
             package='franka_control2',
             executable='franka_control2_node',
-            parameters=[{'robot_description': robot_description}, moveit_controllers],
+            parameters=[robot_description, ros2_controllers_path],
             remappings=[('joint_states', 'franka/joint_states')],
             output={
                 'stdout': 'screen',
@@ -276,26 +409,26 @@ def generate_launch_description():
             parameters=[robot_description],
         ),
         Node(
-            package="controller_manager",
-            executable="spawner",
+            package='controller_manager',
+            executable='spawner',
+            name='panda_arm_controller_spawner',
             arguments=[
-                "joint_state_broadcaster",
-                "--controller-manager-timeout",
-                "300",
-                "--controller-manager",
-                "/controller_manager",
+                'panda_arm_controller',
+                '--controller-manager-timeout', '300',
+                '--controller-manager', '/controller_manager',
             ],
+            output='screen',
         ),
         Node(
-            package="controller_manager",
-            executable="spawner",
+            package='controller_manager',
+            executable='spawner',
+            name='joint_state_broadcaster_spawner',
             arguments=[
-                "panda_arm_controller",
-                "--controller-manager-timeout",
-                "300",
-                "--controller-manager",
-                "/controller_manager",
+                'joint_state_broadcaster',
+                '--controller-manager-timeout', '300',
+                '--controller-manager', '/controller_manager',
             ],
+            output='screen',
         ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource([PathJoinSubstitution(
