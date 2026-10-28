@@ -186,19 +186,6 @@ def generate_launch_description():
             ],
             output="screen",
         ),
-        # RosBridge
-        IncludeLaunchDescription(
-            FrontendLaunchDescriptionSource(
-                os.path.join( get_package_share_directory('rosbridge_server'),
-                    'launch', 'rosbridge_websocket_launch.xml')
-            ),
-            launch_arguments={
-                'port': '9090',
-                # Additional parameters can be added here, for example:
-                # 'address': '',
-                # 'ssl': 'false'
-            }.items()
-        ),
         # End effector pose publisher
         Node(
             package='tf2_publisher',
@@ -258,6 +245,18 @@ def generate_launch_description():
                 '--controller-manager', '/controller_manager',
             ],
             output='screen',
+        ),
+        IncludeLaunchDescription(
+            FrontendLaunchDescriptionSource(
+                os.path.join( get_package_share_directory('rosbridge_server'),
+                    'launch', 'rosbridge_websocket_launch.xml')
+            ),
+            launch_arguments={
+                'port': '9090',
+                # Additional parameters can be added here, for example:
+                # 'address': '',
+                # 'ssl': 'false'
+            }.items()
         ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource([PathJoinSubstitution(

@@ -22,7 +22,7 @@ from launch import LaunchDescription
 from launch.actions import (DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription,
                             Shutdown)
 from launch.conditions import IfCondition
-from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.launch_description_sources import PythonLaunchDescriptionSource, FrontendLaunchDescriptionSource
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
@@ -237,6 +237,38 @@ def generate_launch_description():
                 '--controller-manager', '/controller_manager',
             ],
             output='screen',
+        ),
+        Node(
+            package='moveit_cartesian',
+            executable='moveit_pose',
+            name='cartesian_pose_subscriber',
+            output='screen',
+            parameters=[
+                robot_description,
+                robot_description_semantic,
+                robot_description_kinematics,
+            ],
+        ),
+        Node(
+            package='tf2_publisher',
+            executable='franka_pub',
+            name='tf2listener',
+            parameters=[
+                # panda_link8 for end of arm (target in sim), panda_hand_tcp for end tip
+                {"target_frame": "panda_link8"}
+            ]
+        ),
+        IncludeLaunchDescription(
+            FrontendLaunchDescriptionSource(
+                os.path.join( get_package_share_directory('rosbridge_server'),
+                    'launch', 'rosbridge_websocket_launch.xml')
+            ),
+            launch_arguments={
+                'port': '9090',
+                # Additional parameters can be added here, for example:
+                # 'address': '',
+                # 'ssl': 'false'
+            }.items()
         ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource([PathJoinSubstitution(
