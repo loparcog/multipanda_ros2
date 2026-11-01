@@ -160,6 +160,12 @@ def generate_launch_description():
             default_value='False', 
             description='Database flag'
         ),
+        DeclareLaunchArgument(
+            'initial_positions',
+            default_value='"0.0 -0.785 0.0 -2.356 0.0 1.571 0.785"',
+            description='Initial joint positions of the robot. Must be enclosed in quotes, and in pure number.'
+                    'Defaults to the "communication_test" pose.'
+        ),
         Node(
             package='robot_state_publisher',
             executable='robot_state_publisher',
@@ -193,19 +199,19 @@ def generate_launch_description():
             name='tf2listener',
             parameters=[{'hz': 10.0}],
         ),
-        Node(
-            package='rviz2',
-            executable='rviz2',
-            name='rviz2',
-            output='log',
-            arguments=['-d', rviz_file],
-            parameters=[
-                robot_description,
-                robot_description_semantic,
-                ompl_planning_pipeline_config,
-                robot_description_kinematics,
-            ],
-        ),
+        # Node(
+        #     package='rviz2',
+        #     executable='rviz2',
+        #     name='rviz2',
+        #     output='log',
+        #     arguments=['-d', rviz_file],
+        #     parameters=[
+        #         robot_description,
+        #         robot_description_semantic,
+        #         ompl_planning_pipeline_config,
+        #         robot_description_kinematics,
+        #     ],
+        # ),
         Node(
             package='franka_control2',
             executable='franka_control2_node',
@@ -245,6 +251,14 @@ def generate_launch_description():
                 '--controller-manager', '/controller_manager',
             ],
             output='screen',
+        ),
+        ExecuteProcess(
+            cmd=[
+                [FindExecutable(name="ros2"),
+                " service call ",
+                "/servo_node/start_servo ",
+                "std_srvs/srv/Trigger"]
+            ], shell=True
         ),
         IncludeLaunchDescription(
             FrontendLaunchDescriptionSource(
