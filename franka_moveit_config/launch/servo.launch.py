@@ -140,6 +140,7 @@ def generate_launch_description():
         # Launch arguments
         DeclareLaunchArgument(
             robot_ip_parameter_name,
+            default_value='172.16.0.2',
             description='Hostname or IP address of the robot.'),
         DeclareLaunchArgument(
             use_fake_hardware_parameter_name,
@@ -167,19 +168,12 @@ def generate_launch_description():
                     'Defaults to the "communication_test" pose.'
         ),
         Node(
-            package='robot_state_publisher',
-            executable='robot_state_publisher',
-            name='robot_state_publisher',
-            output='both',
-            parameters=[robot_description],
-        ),
-        Node(
             package='joint_state_publisher',
             executable='joint_state_publisher',
             name='joint_state_publisher',
             parameters=[
                 {'source_list': ['franka/joint_states', 'panda_gripper/joint_states'],
-                    'rate': 30}],
+                    'rate': 50}],
         ),
         Node(
             package="moveit_servo",
@@ -199,19 +193,19 @@ def generate_launch_description():
             name='tf2listener',
             parameters=[{'hz': 10.0}],
         ),
-        # Node(
-        #     package='rviz2',
-        #     executable='rviz2',
-        #     name='rviz2',
-        #     output='log',
-        #     arguments=['-d', rviz_file],
-        #     parameters=[
-        #         robot_description,
-        #         robot_description_semantic,
-        #         ompl_planning_pipeline_config,
-        #         robot_description_kinematics,
-        #     ],
-        # ),
+        Node(
+            package='rviz2',
+            executable='rviz2',
+            name='rviz2',
+            output='log',
+            arguments=['-d', rviz_file],
+            parameters=[
+                robot_description,
+                robot_description_semantic,
+                ompl_planning_pipeline_config,
+                robot_description_kinematics,
+            ],
+        ),
         Node(
             package='franka_control2',
             executable='franka_control2_node',
