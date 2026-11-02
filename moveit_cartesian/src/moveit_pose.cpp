@@ -28,11 +28,11 @@ public:
     poseFloor.position.z = -0.05;             // top face is at z=0.15
     poseFloor.orientation.w = 1.0;
 
-    createCollisionBox("floor", 4.0, 4.0, 0.10, poseFloor);
+    createCollisionBox("floor", 2.0, 2.0, 0.10, poseFloor);
 
     // Make wall
     geometry_msgs::msg::Pose poseWall;
-    poseWall.position.x = -0.5;
+    poseWall.position.x = -0.4;
     poseWall.orientation.w = 1.0;
 
     createCollisionBox("wall", 0.10, 2.0, 2.0, poseWall);
