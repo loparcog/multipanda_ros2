@@ -21,18 +21,17 @@ public:
 
     // Set solver (PRM seems to work best with collision, and is quite fast)
     move_group->setPlannerId("PRMstarkConfigDefault");
-    move_group->setPlanningTime(5.0);
-
+    move_group->setPlanningTime(1.0);
     // Make floor
     geometry_msgs::msg::Pose poseFloor;
-    poseFloor.position.z = -0.05;             // top face is at z=0.15
+    poseFloor.position.z = -0.1;             // top face is at z-(h/2)
     poseFloor.orientation.w = 1.0;
 
     createCollisionBox("floor", 2.0, 2.0, 0.10, poseFloor);
 
     // Make wall
     geometry_msgs::msg::Pose poseWall;
-    poseWall.position.x = -0.4;
+    poseWall.position.x = -0.35;
     poseWall.orientation.w = 1.0;
 
     createCollisionBox("wall", 0.10, 2.0, 2.0, poseWall);
